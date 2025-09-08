@@ -133,7 +133,9 @@ async function removeToyMsg(toyId, msgId) {
 	try {
 		const collection = await dbService.getCollection('toy')
 		await collection.updateOne({ _id: ObjectId.createFromHexString(toyId) }, { $pull: { msgs: { id: msgId } } })
-		return msgId
+		const updatedToy = await collection.findOne({ _id: ObjectId.createFromHexString(toyId) })
+        return updatedToy
+		// return msgId
 	} catch (err) {
 		logger.error(`cannot add toy msg ${toyId}`, err)
 		throw err
