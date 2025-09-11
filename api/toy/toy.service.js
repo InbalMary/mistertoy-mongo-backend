@@ -77,8 +77,14 @@ async function getById(toyId) {
 	try {
 		const collection = await dbService.getCollection('toy')
 		const toy = await collection.findOne({ _id: ObjectId.createFromHexString(toyId) })
+		if (!toy) return null
+
 		toy.createdAt = toy._id.getTimestamp()
-		return toy
+
+		return {
+			...toy,
+			_id: toy._id.toString()
+		}
 	} catch (err) {
 		logger.error(`while finding toy ${toyId}`, err)
 		throw err
@@ -109,13 +115,18 @@ async function add(toy) {
 
 async function update(toy) {
 	try {
-		const toyToSave = {
-			vendor: toy.vendor,
-			price: toy.price,
-		}
+		const { _id, ...toyData } = toy
+
 		const collection = await dbService.getCollection('toy')
-		await collection.updateOne({ _id: ObjectId.createFromHexString(toy._id) }, { $set: toyToSave })
-		return toy
+		await collection.updateOne(
+			{ _id: ObjectId.createFromHexString(_id) },
+			{ $set: toyData })
+
+		const updatedToy = await collection.findOne({ _id: ObjectId.createFromHexString(_id) })
+		return {
+			...updatedToy,
+			_id: updatedToy._id.toString()
+		}
 	} catch (err) {
 		logger.error(`cannot update toy ${toy._id}`, err)
 		throw err

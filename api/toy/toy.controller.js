@@ -50,7 +50,8 @@ export async function addToy(req, res) {
 
 export async function updateToy(req, res) {
     const { _id, name, price, labels = [], inStock = true, imgUrl, msgs = [] } = req.body
-    if (!name || !price) res.status(400).send('Missing dada')
+
+    if (!name || !price) return res.status(400).send({ err: 'Missing data' })
 
     const toy = { _id, name, price, labels, inStock, imgUrl, msgs }
 
