@@ -24,5 +24,7 @@ export async function requireAdmin(req, res, next) {
         res.status(403).end('Not Authorized')
         return
     }
+
+    req.loggedinUser = loggedinUser
     next()
 }

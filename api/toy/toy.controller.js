@@ -33,10 +33,13 @@ export async function getToyById(req, res) {
 
 export async function addToy(req, res) {
     const { loggedinUser } = req
+    const { name, price, labels = [], inStock = true, imgUrl, msgs = [] } = req.body
+    if (!name || !price) res.status(400).send('Missing dada')
+
+    const toy = { name, price, labels, inStock, imgUrl, msgs }
+    toy.owner = loggedinUser
 
     try {
-        const toy = req.body
-        toy.owner = loggedinUser
         const addedToy = await toyService.add(toy)
         res.json(addedToy)
     } catch (err) {
@@ -46,8 +49,12 @@ export async function addToy(req, res) {
 }
 
 export async function updateToy(req, res) {
+    const { _id, name, price, labels = [], inStock = true, imgUrl, msgs = [] } = req.body
+    if (!name || !price) res.status(400).send('Missing dada')
+
+    const toy = { _id, name, price, labels, inStock, imgUrl, msgs }
+
     try {
-        const toy = { ...req.body, _id: req.params.id }
         const updatedToy = await toyService.update(toy)
         res.json(updatedToy)
     } catch (err) {
