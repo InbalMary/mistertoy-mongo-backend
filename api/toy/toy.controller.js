@@ -3,13 +3,14 @@ import { logger } from '../../services/logger.service.js'
 
 export async function getToys(req, res) {
     try {
+        const { txt, price = 0, inStock, labels, sort, pageIdx } = req.query
         const filterBy = {
-            txt: req.query.txt || '',
-            price: req.query.price,
-            inStock: req.query.inStock,
-            labels: req.query.labels ? req.query.labels.split(',') : [],
-            sort: req.query.sort,
-            pageIdx: +req.query.pageIdx || 0,
+            txt: txt || '',
+            price: +price || 0,
+            inStock: inStock || null,
+            labels: labels ? labels.split(',') : [],
+            sort: sort,
+            pageIdx: +pageIdx || 0,
         }
         const toys = await toyService.query(filterBy)
         res.json(toys)

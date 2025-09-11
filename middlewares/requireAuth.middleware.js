@@ -19,7 +19,7 @@ export async function requireAdmin(req, res, next) {
     }
 
     const loggedinUser = authService.validateToken(req.cookies.loginToken)
-    if (!loggedinUser.isAdmin) {
+    if (!loggedinUser?.isAdmin) {
         logger.warn(loggedinUser.fullname + 'attempted to perform admin action')
         res.status(403).end('Not Authorized')
         return
