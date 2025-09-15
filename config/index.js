@@ -8,4 +8,10 @@ if (process.env.NODE_ENV === 'production') {
 } else {
     config = configDev
 }
-config.isGuestMode = true
+
+//* Uncomment the following line to use guest mode
+// config.isGuestMode = true
+
+
+//* Uncomment the following line to use the production configuration (Mongo Atlas DB)
+// config = configProd

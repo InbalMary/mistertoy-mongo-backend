@@ -103,6 +103,7 @@ async function add(user) {
 			username: user.username,
 			password: user.password,
 			fullname: user.fullname,
+			imgUrl: user.imgUrl,
 			score: user.score || 0,
 			isAdmin: false,
 		}
