@@ -4,6 +4,13 @@ import cors  from 'cors'
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url'
 
+import { authRoutes } from './api/auth/auth.routes.js'
+import { userRoutes } from './api/user/user.routes.js'
+import { reviewRoutes } from './api/review/review.routes.js'
+import { toyRoutes } from './api/toy/toy.routes.js'
+
+import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -36,14 +43,12 @@ if (process.env.NODE_ENV === 'production') {
     }
     app.use(cors(corsOptions))
 }
-
-import { authRoutes } from './api/auth/auth.routes.js'
-import { userRoutes } from './api/user/user.routes.js'
-import { toyRoutes } from './api/toy/toy.routes.js'
+app.all('*all', setupAsyncLocalStorage)
 
 // routes
 app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api/review', reviewRoutes)
 app.use('/api/toy', toyRoutes)
 
 // Make every unmatched server-side-route fall back to index.html

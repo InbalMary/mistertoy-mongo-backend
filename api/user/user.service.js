@@ -1,6 +1,6 @@
 import { dbService } from '../../services/db.service.js'
 import { logger } from '../../services/logger.service.js'
-
+import { reviewService } from '../review/review.service.js'
 import { ObjectId } from 'mongodb'
 
 export const userService = {
@@ -32,9 +32,21 @@ async function query(filterBy = {}) {
 
 async function getById(userId) {
 	try {
+		var criteria = { _id: ObjectId.createFromHexString(userId) }
+
 		const collection = await dbService.getCollection('user')
-		const user = await collection.findOne({ _id: ObjectId.createFromHexString(userId) })
+		const user = await collection.findOne(criteria)
 		delete user.password
+
+		criteria = { byUserId: userId }
+
+		user.givenReviews = await reviewService.query(criteria)
+		// console.log(user.givenReviews)
+
+		user.givenReviews = user.givenReviews.map(review => {
+			delete review.byUser
+			return review
+		})
 		return user
 	} catch (err) {
 		logger.error(`while finding user ${userId}`, err)
