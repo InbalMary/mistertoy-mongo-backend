@@ -79,7 +79,7 @@ async function update(user) {
 		// peek only updatable fields!
 		const userToSave = {
 			_id: ObjectId.createFromHexString(user._id),
-			username: user.username,
+			// username: user.username,
 			fullname: user.fullname,
 			score: user.score,
 		}
