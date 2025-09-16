@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import { dbService } from '../../services/db.service.js'
 import { logger } from '../../services/logger.service.js'
 import { utilService } from '../../services/util.service.js'
+import { asyncLocalStorage } from '../../services/als.service.js'
 
 export const toyService = {
 	remove,
@@ -92,10 +93,21 @@ async function getById(toyId) {
 }
 
 async function remove(toyId) {
+	const { loggedinUser } = asyncLocalStorage.getStore()
+    const { _id: ownerId, isAdmin } = loggedinUser
+
 	try {
+		const criteria = {
+            _id: ObjectId.createFromHexString(toyId)
+        }
+        if (!isAdmin) criteria['owner._id'] = ownerId
+
 		const collection = await dbService.getCollection('toy')
-		const { deletedCount } = await collection.deleteOne({ _id: ObjectId.createFromHexString(toyId) })
-		return deletedCount
+		const res = await collection.deleteOne(criteria)
+
+        if (res.deletedCount === 0) throw new Error('Not your toy')
+
+        return toyId
 	} catch (err) {
 		logger.error(`cannot remove toy ${toyId}`, err)
 		throw err
