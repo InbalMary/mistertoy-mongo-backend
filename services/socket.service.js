@@ -13,8 +13,14 @@ export function setupSocketAPI(http) {
         logger.info(`New connected socket [id: ${socket.id}]`)
         socket.on('disconnect', socket => {
             logger.info(`Socket disconnected [id: ${socket.id}]`)
+            if (socket.myTopic && socket.userName) {
+                gIo.to(socket.myTopic).emit('chat-typing', {
+                    userName: socket.userName,
+                    isTyping: false
+                })
+            }
         })
-        socket.on('chat-set-topic', topic => {
+        socket.on('chat-set-topic', ({ topic, userName }) => {
             if (socket.myTopic === topic) return
             if (socket.myTopic) {
                 socket.leave(socket.myTopic)
@@ -22,6 +28,8 @@ export function setupSocketAPI(http) {
             }
             socket.join(topic)
             socket.myTopic = topic
+            socket.userName = userName || `Guest-${socket.id}`
+            logger.info(`Socket joined topic ${topic} as ${socket.userName} [id: ${socket.id}]`)
         })
         socket.on('chat-send-msg', msg => {
             logger.info(`New chat msg from socket [id: ${socket.id}], emitting to topic ${socket.myTopic}`)
@@ -29,6 +37,10 @@ export function setupSocketAPI(http) {
             // gIo.emit('chat addMsg', msg)
             // emits only to sockets in the same room
             gIo.to(socket.myTopic).emit('chat-add-msg', msg)
+        })
+        socket.on('chat-typing', data => {
+            logger.info(`Typing event from ${data.userName} [id: ${socket.id}], in topic ${socket.myTopic}`)
+            socket.broadcast.to(socket.myTopic).emit('chat-typing-update', data)
         })
         socket.on('user-watch', userId => {
             logger.info(`user-watch from socket [id: ${socket.id}], on user ${userId}`)
