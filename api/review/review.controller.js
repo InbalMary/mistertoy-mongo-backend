@@ -1,5 +1,5 @@
 import { logger } from '../../services/logger.service.js'
-// import { socketService } from '../../services/socket.service.js'
+import { socketService } from '../../services/socket.service.js'
 import { userService } from '../user/user.service.js'
 import { authService } from '../auth/auth.service.js'
 import { reviewService } from './review.service.js'
@@ -22,7 +22,7 @@ export async function deleteReview(req, res) {
     try {
         const deletedCount = await reviewService.remove(reviewId)
         if (deletedCount === 1) {
-            // socketService.broadcast({ type: 'review-removed', data: reviewId, userId: loggedinUser._id })
+            socketService.broadcast({ type: 'review-removed', data: reviewId, userId: loggedinUser._id })
             res.send({ msg: 'Deleted successfully' })
         } else {
             res.status(400).send({ err: 'Cannot remove review' })
@@ -89,11 +89,18 @@ export async function addReview(req, res) {
 
         // delete review.byUserId
 
-        // socketService.broadcast({ type: 'review-added', data: review, userId: loggedinUser._id })
-        // socketService.emitToUser({ type: 'review-about-you', data: review, userId: review.aboutUser._id })
-
-        // const fullUser = await userService.getById(loggedinUser._id)
-        // socketService.emitTo({ type: 'user-updated', data: fullUser, label: fullUser._id })
+        
+        socketService.broadcast({ type: 'review-added', data: review, userId: loggedinUser._id })
+        
+        if (toy.owner && toy.owner._id !== loggedinUser._id) {
+            socketService.emitTo({ 
+                type: 'review-about-your-toy', 
+                data: review, 
+                label: toy.owner._id
+            })
+        }
+        const fullUser = await userService.getById(loggedinUser._id)
+        socketService.emitTo({ type: 'user-updated', data: fullUser, label: fullUser._id })
 
         res.send(responseReview)
     } catch (err) {
