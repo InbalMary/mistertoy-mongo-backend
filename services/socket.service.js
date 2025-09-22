@@ -1,5 +1,6 @@
 import { logger } from './logger.service.js'
 import { Server } from 'socket.io'
+import { toyService } from '../api/toy/toy.service.js'
 
 var gIo = null
 
@@ -11,6 +12,7 @@ export function setupSocketAPI(http) {
     })
     gIo.on('connection', socket => {
         logger.info(`New connected socket [id: ${socket.id}]`)
+
         socket.on('disconnect', socket => {
             logger.info(`Socket disconnected [id: ${socket.id}]`)
             if (socket.myTopic && socket.userName) {
@@ -20,23 +22,32 @@ export function setupSocketAPI(http) {
                 })
             }
         })
-        socket.on('chat-set-topic', ({ topic, userName }) => {
-            if (socket.myTopic === topic) return
-            if (socket.myTopic) {
+
+        socket.on('chat-set-topic', async ({ topic, userName }) => {
+            if (socket.myTopic && socket.myTopic !== topic) {
                 socket.leave(socket.myTopic)
-                logger.info(`Socket is leaving topic ${socket.myTopic} [id: ${socket.id}]`)
+                logger.info(`Socket leaving topic ${socket.myTopic} [id: ${socket.id}]`)
             }
             socket.join(topic)
             socket.myTopic = topic
             socket.userName = userName || `Guest-${socket.id}`
             logger.info(`Socket joined topic ${topic} as ${socket.userName} [id: ${socket.id}]`)
+
+            const toy = await toyService.getById(topic)
+            const history = toy?.chatHistory || []  
+            socket.emit('chat-history', history)
         })
-        socket.on('chat-send-msg', msg => {
-            logger.info(`New chat msg from socket [id: ${socket.id}], emitting to topic ${socket.myTopic}`)
-            // emits to all sockets:
-            // gIo.emit('chat addMsg', msg)
-            // emits only to sockets in the same room
-            gIo.to(socket.myTopic).emit('chat-add-msg', msg)
+        socket.on('chat-send-msg', async (msg) => {
+            logger.info(`New chat msg from socket [id: ${socket.id}], topic ${socket.myTopic}`)
+
+            const topic = socket.myTopic
+            if (!topic) return
+
+            msg.timestamp = new Date().toISOString()
+
+            await toyService.addChatMsg(topic, msg)
+
+            gIo.to(topic).emit('chat-add-msg', msg)
         })
         socket.on('chat-typing', data => {
             logger.info(`Typing event from ${data.userName} [id: ${socket.id}], in topic ${socket.myTopic}`)

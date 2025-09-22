@@ -15,6 +15,7 @@ export const toyService = {
 	getLabelStats,
 	addToyMsg,
 	removeToyMsg,
+	addChatMsg,
 }
 
 const PAGE_SIZE = 10
@@ -254,4 +255,12 @@ async function getLabelStats() {
 		logger.error('cannot get label stats', err)
 		throw err
 	}
+}
+
+async function addChatMsg(toyId, msg) {
+    const collection = await dbService.getCollection('toy')
+    await collection.updateOne(
+        { _id: new ObjectId(toyId) },
+        { $push: { chatHistory: msg } }
+    )
 }
