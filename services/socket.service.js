@@ -65,7 +65,10 @@ export function setupSocketAPI(http) {
             logger.info(`Removing socket.userId for socket [id: ${socket.id}]`)
             delete socket.userId
         })
-
+        socket.on('admin-shop-update', (updateInfo) => {
+            logger.info(`Admin updated shop: ${JSON.stringify(updateInfo)}`)
+            gIo.emit('shop-updated', updateInfo)
+        })
     })
 }
 

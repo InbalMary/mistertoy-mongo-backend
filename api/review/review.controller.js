@@ -90,12 +90,12 @@ export async function addReview(req, res) {
         // delete review.byUserId
 
         
-        socketService.broadcast({ type: 'review-added', data: review, userId: loggedinUser._id })
+        socketService.broadcast({ type: 'review-added', data: responseReview, userId: loggedinUser._id })
         
         if (toy.owner && toy.owner._id !== loggedinUser._id) {
             socketService.emitTo({ 
                 type: 'review-about-your-toy', 
-                data: review, 
+                data: responseReview, 
                 label: toy.owner._id
             })
         }

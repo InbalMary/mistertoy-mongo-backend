@@ -4,6 +4,7 @@ import { dbService } from '../../services/db.service.js'
 import { logger } from '../../services/logger.service.js'
 import { utilService } from '../../services/util.service.js'
 import { asyncLocalStorage } from '../../services/als.service.js'
+import { socketService } from '../../services/socket.service.js'
 
 export const toyService = {
 	remove,
@@ -94,21 +95,28 @@ async function getById(toyId) {
 }
 
 async function remove(toyId) {
-	const { loggedinUser } = asyncLocalStorage.getStore()
-    const { _id: ownerId, isAdmin } = loggedinUser
+	const { loggedinUser } = asyncLocalStorage.getStore() || {}
+	const ownerId = loggedinUser?._id
+	const isAdmin = loggedinUser?.isAdmin
 
 	try {
-		const criteria = {
-            _id: ObjectId.createFromHexString(toyId)
-        }
-        if (!isAdmin) criteria['owner._id'] = ownerId
+		const criteria = { _id: ObjectId.createFromHexString(toyId) }
+		if (!isAdmin && ownerId) criteria['owner._id'] = ownerId
 
 		const collection = await dbService.getCollection('toy')
 		const res = await collection.deleteOne(criteria)
 
-        if (res.deletedCount === 0) throw new Error('Not your toy')
+		if (res.deletedCount === 0) throw new Error('Not your toy')
 
-        return toyId
+		if (isAdmin && loggedinUser?._id) {
+			socketService.broadcast({
+				type: 'shop-updated',
+				data: { itemId: toyId, action: 'removed', by: loggedinUser.fullname || 'Admin' },
+				userId: ownerId?.toString()
+			})
+		}
+
+		return toyId
 	} catch (err) {
 		logger.error(`cannot remove toy ${toyId}`, err)
 		throw err
@@ -116,9 +124,22 @@ async function remove(toyId) {
 }
 
 async function add(toy) {
+	const { loggedinUser } = asyncLocalStorage.getStore() || {}
+	const isAdmin = loggedinUser?.isAdmin
+	const ownerId = loggedinUser?._id
+
 	try {
 		const collection = await dbService.getCollection('toy')
-		await collection.insertOne(toy)
+		const res = await collection.insertOne(toy)
+
+		if (isAdmin && ownerId) {
+			socketService.broadcast({
+				type: 'shop-updated',
+				data: { itemId: toy._id?.toString(), action: 'added', by: loggedinUser.fullname || 'Admin' },
+				userId: ownerId.toString()
+			})
+		}
+
 		return toy
 	} catch (err) {
 		logger.error('cannot insert toy', err)
@@ -127,18 +148,30 @@ async function add(toy) {
 }
 
 async function update(toy) {
+	const { loggedinUser } = asyncLocalStorage.getStore() || {}
+	const isAdmin = loggedinUser?.isAdmin
+	const userId = loggedinUser?._id
+
 	try {
 		const { _id, ...toyData } = toy
-
 		const collection = await dbService.getCollection('toy')
 		await collection.updateOne(
 			{ _id: ObjectId.createFromHexString(_id) },
 			{ $set: toyData })
 
 		const updatedToy = await collection.findOne({ _id: ObjectId.createFromHexString(_id) })
+
+		if (isAdmin && userId) {
+			socketService.broadcast({
+				type: 'shop-updated',
+				data: { itemId: updatedToy._id?.toString(), action: 'updated', by: loggedinUser.fullname || 'Admin' },
+				userId: userId.toString()
+			})
+		}
+
 		return {
 			...updatedToy,
-			_id: updatedToy._id.toString()
+			_id: updatedToy._id?.toString()
 		}
 	} catch (err) {
 		logger.error(`cannot update toy ${toy._id}`, err)
@@ -258,9 +291,9 @@ async function getLabelStats() {
 }
 
 async function addChatMsg(toyId, msg) {
-    const collection = await dbService.getCollection('toy')
-    await collection.updateOne(
-        { _id: new ObjectId(toyId) },
-        { $push: { chatHistory: msg } }
-    )
+	const collection = await dbService.getCollection('toy')
+	await collection.updateOne(
+		{ _id: new ObjectId(toyId) },
+		{ $push: { chatHistory: msg } }
+	)
 }
